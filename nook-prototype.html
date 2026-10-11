@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.js"></script>
+<style>
+:root{--ink:#1E2B24;--cream:#FFFDF6;--paper:#F6F2E6;--mute:#4B5A50;--line:#E5E0CE;--acc:#D9512C;--sun:#FFC44D;--bg:#D9DCC8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101813}}
+:root[data-theme=dark]{--bg:#101813}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}body{background:var(--bg);font-family:'DM Sans',system-ui,sans-serif;color:var(--ink)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}input{font:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+h1,h2,.disp{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;letter-spacing:-.02em}
+#stage{position:absolute;left:50%;top:50%;width:390px;height:844px;overflow:hidden;background:#8CCBE3;transform-origin:50% 50%}
+.abs{position:absolute}
+#map{position:absolute;inset:0;z-index:0}
+#map .mapboxgl-ctrl-logo,#map .mapboxgl-ctrl-bottom-right{z-index:2}
+@keyframes pulse{0%{transform:scale(.85);opacity:.75}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes rec{50%{opacity:.35}}
+@keyframes drift{to{transform:translateX(-50px) rotate(8deg)}}
+@keyframes bump{40%{transform:scale(1.5)}}
+@keyframes wave{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.pin{isolation:isolate;position:absolute;width:46px;height:62px;transform:translate(-50%,-100%);padding:0}
+.pin .sh{position:absolute;left:11px;bottom:-3px;width:24px;height:8px;border-radius:50%;background:rgba(30,43,36,.32);filter:blur(1.5px)}
+.pin .st{position:absolute;left:21px;top:38px;width:4px;height:18px;border-radius:2px;background:var(--cream);box-shadow:1px 0 0 rgba(0,0,0,.12)}
+.pin .hd{position:absolute;left:3px;top:0;width:40px;height:40px;border-radius:50%;border:3px solid var(--cream);box-shadow:inset 0 -5px 0 rgba(0,0,0,.14),0 5px 10px rgba(30,43,36,.3);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pin .bd{position:absolute;right:-8px;top:-8px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:var(--ink);color:var(--cream);border:2px solid var(--cream);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.pin.me .hd{border-color:var(--ink)}
+.pin.pulse .hd{animation:bob .6s ease-in-out 4}
+.pin.wish .hd{background:var(--sun);animation:bob 2.4s ease-in-out infinite}
+.pin.wish i{position:absolute;left:3px;top:0;width:40px;height:40px;border-radius:50%;background:var(--sun);animation:pulse 2.2s ease-out infinite;z-index:-1}
+.chip{flex:none;height:34px;padding:0 12px;border-radius:99px;border:1.5px solid #D5D3C3;background:var(--cream);font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.chip.on{background:var(--ink);color:var(--cream);border-color:var(--ink)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.layer{position:absolute;inset:0;background:var(--paper);overflow-y:auto;padding:22px 16px 120px;display:none;z-index:4}
+.layer.show{display:block}
+.card{background:var(--cream);border-radius:20px;padding:14px;margin-top:12px}
+.btn{height:50px;border-radius:14px;background:var(--acc);color:#fff;font-size:15px;font-weight:700;padding:0 16px;width:100%}
+.btn.alt{background:transparent;border:1.5px solid var(--ink);color:var(--ink)}
+.btn.dark{background:var(--ink);color:var(--cream)}
+.sub{font-size:13px;color:var(--mute)}
+.lbl{font-size:13px;font-weight:700;margin:16px 0 8px}
+.sw{width:46px;height:28px;border-radius:99px;background:#CFCBB8;position:relative;flex:none;transition:background .15s}
+.sw::after{content:'';position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw[aria-checked=true]{background:#3E8E5A}.sw[aria-checked=true]::after{transform:translateX(18px)}
+.opt{width:44px;height:44px;border-radius:14px;background:var(--cream);border:2px solid var(--line);display:flex;align-items:center;justify-content:center}.opt.on{border-color:var(--ink);background:#E7EFE0}
+.cs{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line)}.cs.on{box-shadow:0 0 0 3px var(--ink)}
+.rx{flex:1;height:46px;border-radius:14px;background:var(--paper);font-size:22px;border:2px solid transparent}.rx.on{border-color:var(--ink);background:#E7EFE0}.rx.b span{display:inline-block;animation:bump .4s}
+.scrim{position:absolute;inset:0;background:rgba(30,43,36,.35);z-index:8}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:760px;overflow-y:auto;background:var(--cream);border-radius:28px 28px 0 0;box-shadow:0 -8px 24px rgba(30,43,36,.18);z-index:9;animation:up .28s ease-out}
+.band{height:84px;position:relative;overflow:hidden}
+.toast{position:absolute;left:50%;top:84px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;font-size:13px;font-weight:700;z-index:40;white-space:nowrap;animation:up .25s}
+.full{position:absolute;inset:0;z-index:20;display:none}.full.show{display:block}
+nav{position:absolute;left:0;bottom:0;width:390px;height:88px;background:var(--cream);border-radius:26px 26px 0 0;box-shadow:0 -4px 18px rgba(30,43,36,.12);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:0 8px 10px;z-index:6}
+nav button{height:60px;font-size:11px;font-weight:700;color:#7B887F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}nav button.on{color:var(--ink)}
+input[type=text]{width:100%;height:48px;border:1.5px solid #CFCBB8;border-radius:14px;padding:0 14px;font-size:15px;background:var(--paper);color:var(--ink)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div id="stage">
+<div id="map"></div>
+<div id="pins" class="abs" style="inset:0;z-index:3"></div>
+<div id="drop" class="abs" style="inset:0;display:none;cursor:crosshair;z-index:3;background:rgba(30,43,36,.08)"></div>
+
+<div id="top" class="abs" style="left:10px;right:10px;top:10px;padding:12px 12px 10px;border-radius:24px;background:rgba(255,253,246,.9);backdrop-filter:blur(10px);box-shadow:0 6px 20px rgba(30,43,36,.12);z-index:5">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:baseline;gap:8px"><div class="disp" style="font-size:28px;line-height:1">nook</div><div class="sub" style="font-weight:700">Vancouver</div></div>
+    <button id="meBtn" aria-label="Your profile" style="display:flex;align-items:center;gap:8px;padding:3px 12px 3px 3px;background:var(--ink);color:var(--cream);border-radius:99px"><span id="meFace" style="width:30px;height:30px;border-radius:50%;overflow:hidden;display:block"></span><b style="font-size:12px">Chloe</b></button>
+  </div>
+  <div id="chips" style="display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none"></div>
+</div>
+<div id="banner" class="abs" style="left:10px;right:10px;top:10px;padding:14px;border-radius:24px;background:var(--ink);color:var(--cream);z-index:6;display:none;align-items:center;gap:10px"><div style="flex:1"><b>Tap the map to drop a wish pin</b><div style="font-size:12px;opacity:.8">Pick a spot you want to go to</div></div><button id="dropX" class="chip" style="color:var(--ink)">Cancel</button></div>
+<button id="wishBtn" class="abs" style="left:10px;bottom:104px;height:48px;padding:0 16px 0 10px;display:flex;align-items:center;gap:8px;border-radius:16px;background:var(--cream);box-shadow:0 6px 16px rgba(30,43,36,.22);font-size:14px;font-weight:700;z-index:5"><span style="width:30px;height:30px;border-radius:10px;background:var(--ink);display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z" fill="#FFC44D"/></svg></span>Add wish pin</button>
+<button id="grpBtn" class="abs" style="right:10px;bottom:104px;height:48px;padding:0 16px;border-radius:16px;background:var(--ink);color:var(--cream);font-size:14px;font-weight:700;box-shadow:0 6px 16px rgba(30,43,36,.3);z-index:5">Groups</button>
+
+<section id="L-wishes" class="layer"><h1 style="font-size:32px">Wish pins</h1><p class="sub">Places you want to go. Friends in the groups you pick see them on their maps too.</p><button id="newWish" class="btn dark" style="margin-top:14px">Drop a new wish pin</button><div id="wishList"></div></section>
+<section id="L-groups" class="layer"><h1 style="font-size:32px">Groups</h1><p class="sub">Switch a group off to hide its pins from your map.</p><div id="grpList"></div><button id="newGrp" class="btn alt" style="margin-top:16px">+ New group</button><div id="grpForm"></div></section>
+<section id="L-me" class="layer"><div style="display:flex;align-items:center;gap:14px"><div id="bigFace" style="width:76px;height:76px"></div><div><h1 style="font-size:26px">Chloe</h1><div class="sub" id="meStat"></div></div></div><div id="editor"></div>
+ <h2 style="font-size:20px;margin:24px 0 4px">Your logs</h2><div id="myLogs"></div></section>
+
+<div id="sheetHost"></div>
+
+<div id="story" class="full" style="color:#fff;overflow:hidden"></div>
+<section id="cap" class="full" style="background:#121614;color:#F3F1E6">
+  <div class="abs" style="left:16px;right:16px;top:96px;bottom:200px;border-radius:28px;background:#2A332C;overflow:hidden">
+    <svg width="358" height="500" viewBox="0 0 358 500" class="abs" style="left:0;top:0"><path d="M0 300L80 170L140 240L210 120L290 230L358 180V500H0Z" fill="#36423A"/><circle cx="270" cy="90" r="30" fill="#4A5A4E"/></svg>
+    <div class="abs" style="left:14px;top:14px;width:30px;height:30px;border-left:3px solid #F3F1E6;border-top:3px solid #F3F1E6;border-radius:10px 0 0 0"></div><div class="abs" style="right:14px;top:14px;width:30px;height:30px;border-right:3px solid #F3F1E6;border-top:3px solid #F3F1E6;border-radius:0 10px 0 0"></div><div class="abs" style="left:14px;bottom:14px;width:30px;height:30px;border-left:3px solid #F3F1E6;border-bottom:3px solid #F3F1E6;border-radius:0 0 0 10px"></div><div class="abs" style="right:14px;bottom:14px;width:30px;height:30px;border-right:3px solid #F3F1E6;border-bottom:3px solid #F3F1E6;border-radius:0 0 10px 0"></div>
+    <div id="recB" class="abs" style="left:50%;top:22px;transform:translateX(-50%);padding:5px 12px;border-radius:99px;background:rgba(0,0,0,.55);font-size:13px;font-weight:700;white-space:nowrap">Ready</div></div>
+  <button id="capX" aria-label="Cancel" class="abs" style="left:14px;top:26px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);font-size:18px">✕</button>
+  <div id="near" class="abs" style="left:70px;right:12px;top:28px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"></div>
+  <div id="capHint" class="abs" style="left:0;right:0;bottom:150px;text-align:center;font-size:15px;font-weight:700">I'm here. Tap to record up to 5 seconds.</div>
+  <button id="rec" aria-label="Record" class="abs" style="left:50%;bottom:34px;margin-left:-45px;width:90px;height:90px"><svg width="90" height="90" viewBox="0 0 90 90"><circle cx="45" cy="45" r="40" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="6"/><circle id="ring" cx="45" cy="45" r="40" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3" transform="rotate(-90 45 45)"/><circle id="dotR" cx="45" cy="45" r="28" fill="#FF5A4A"/></svg></button>
+</section>
+<section id="det" class="full" style="background:var(--paper);padding:20px 18px;overflow-y:auto">
+  <button id="detX" class="opt" aria-label="Back">←</button>
+  <div style="display:flex;gap:14px;margin-top:14px"><div id="thumb" style="width:96px;height:128px;border-radius:16px;flex:none;color:#fff;font-size:12px;font-weight:700;padding:8px;display:flex;align-items:flex-end"></div><div><h2 id="dName" style="font-size:22px;line-height:1.1"></h2><div id="dArea" class="sub" style="margin-top:4px"></div></div></div>
+  <div class="lbl">One line (optional)</div><input type="text" id="capT" placeholder="what's here?">
+  <div class="lbl">Share with which groups</div><div id="shareG" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  <div id="seen" class="sub" style="margin-top:10px"></div>
+  <button id="post" class="btn" style="margin-top:20px;height:54px;font-size:16px">Log it</button>
+</section>
+<section id="done" class="full" style="background:var(--ink);color:var(--cream);text-align:center;padding:150px 28px 0">
+  <div style="position:relative;width:110px;height:110px;margin:0 auto"><div class="abs" style="inset:0;border-radius:50%;background:var(--sun);animation:pulse 1.6s ease-out infinite"></div><div class="abs" style="inset:0;border-radius:50%;background:var(--sun);display:flex;align-items:center;justify-content:center"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1E2B24" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div></div>
+  <h1 style="font-size:34px;margin-top:24px">Logged</h1><div id="dnP" style="margin-top:4px;opacity:.85"></div>
+  <p style="margin-top:18px">Your pin is on the map. These friends can watch it:</p><div id="dnF" style="display:flex;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap"></div>
+  <button id="dnGo" class="btn" style="margin-top:34px;background:var(--cream);color:var(--ink)">See it on the map</button></section>
+
+<nav id="nav"></nav>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const COL=['#2BAE8C','#F08BA3','#F2B731','#5B6BF0','#E5583B','#7A6CF0','#4AB2E3','#C7C42A'];
+const HAIR=['','M42 16C36 2 58 0 52 14','M16 40C24 12 64 6 86 32','M24 26c-6-8 4-14 9-8c2-9 14-8 14 0c3-8 15-6 13 2c6-6 14 2 8 8','M14 58C8 18 40 2 62 10C84 16 92 40 86 62','M30 20l8-9 8 9 8-9 8 9 8-9','M18 40C22 10 78 6 84 34M58 24L98 34'];
+const EYE=['<circle cx="36" cy="44" r="3.5" fill="#1a1a1a" stroke="none"/><circle cx="64" cy="44" r="3.5" fill="#1a1a1a" stroke="none"/>','<path d="M29 47q7-10 14 0M57 47q7-10 14 0"/>','<circle cx="36" cy="44" r="3.5" fill="#1a1a1a" stroke="none"/><path d="M57 47q7-10 14 0"/>','<circle cx="36" cy="44" r="7"/><circle cx="64" cy="44" r="7"/><circle cx="36" cy="44" r="2" fill="#1a1a1a"/><circle cx="64" cy="44" r="2" fill="#1a1a1a"/>','<path d="M29 44h14M57 44h14"/>'];
+const NOSE=['<path d="M50 48v11q-5 4-9 1"/>','<circle cx="50" cy="55" r="2.5" fill="#1a1a1a" stroke="none"/>','<path d="M47 48l7 12h-9"/>'];
+const MOUTH=['<path d="M34 68q16 16 32 0"/>','<path d="M32 66q18 24 36 0z" fill="#1a1a1a"/>','<path d="M38 70q14 6 26-4"/>','<circle cx="50" cy="73" r="6"/>'];
+const XTRA=['','<circle cx="36" cy="44" r="10"/><circle cx="64" cy="44" r="10"/><path d="M46 44h8"/>','<path d="M33 63q8-7 17 0q9-7 17 0"/>','<circle cx="25" cy="58" r="7" fill="#F08BA3" stroke="none" opacity=".7"/><circle cx="75" cy="58" r="7" fill="#F08BA3" stroke="none" opacity=".7"/>','<rect x="24" y="37" width="22" height="14" rx="6" fill="#1a1a1a"/><rect x="54" y="37" width="22" height="14" rx="6" fill="#1a1a1a"/><path d="M46 42h8"/>'];
+const face=(f,z)=>`<svg width="${z}" height="${z}" viewBox="0 0 100 100" aria-hidden="true" style="display:block"><circle cx="50" cy="50" r="50" fill="${COL[f.c]}"/><g fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">${f.h?`<path d="${HAIR[f.h]}"/>`:''}${EYE[f.e]}${NOSE[f.n]}${MOUTH[f.m]}${XTRA[f.x]}</g></svg>`;
+const me={id:'me',n:'Chloe',f:{c:0,h:1,e:1,n:0,m:0,x:0}};
+const F=[{id:'maya',n:'Maya',f:{c:5,h:3,e:0,n:1,m:0,x:1}},{id:'dev',n:'Dev',f:{c:3,h:2,e:3,n:0,m:1,x:0}},{id:'priya',n:'Priya',f:{c:1,h:4,e:1,n:2,m:0,x:3}},{id:'theo',n:'Theo',f:{c:2,h:5,e:2,n:0,m:2,x:2}},{id:'jun',n:'Jun',f:{c:6,h:6,e:4,n:1,m:3,x:4}},{id:'sol',n:'Sol',f:{c:4,h:0,e:0,n:2,m:1,x:0}}];
+const FB=Object.fromEntries([...F,me].map(f=>[f.id,f]));
+let G=[{id:'uni',n:'Uni crew',col:'#7A4FA0',m:['maya','dev','priya'],on:true},{id:'room',n:'Roommates',col:'#2F6FA6',m:['theo','sol'],on:true},{id:'climb',n:'Climbing',col:'#3E8E5A',m:['dev','jun','priya'],on:true},{id:'brunch',n:'Brunch club',col:'#D9512C',m:['maya','jun','sol'],on:true}];
+let L=[
+['maya','Basement record shop','Chinatown',310,385,2,'new bins on Tuesdays'],['priya','Rooftop above Gastown','Downtown',232,352,4,'golden hour was unreal'],['dev','Bouldering gym','Mount Pleasant',322,540,26,'beginner wall is free tonight'],
+['theo','Hand-pulled noodle counter','Main Street',290,650,3,'worth the queue'],['jun','Tidal flats at low tide','Spanish Banks',62,648,48,'walked out so far'],['sol','Zine library loft','Kitsilano',190,566,5,'quiet, free, cozy'],
+['maya','Jazz in the laundromat','Kitsilano',138,530,72,'cash tips only'],['dev','Seawall sunrise','Stanley Park',84,368,6,'4 minutes of silence'],['theo','Late-night study café','Commercial Drive',350,712,50,'open till 2'],
+['jun','Island market stalls','Granville Island',206,470,96,'get the donuts'],['priya','Lawn by the museum','UBC',58,772,24,'nap spot found'],['sol','Hilltop picnic bench','Queen Elizabeth Park',214,694,120,'best view in the city']
+].map((a,i)=>({id:'l'+i,w:a[0],p:a[1],a:a[2],x:a[3],y:a[4],h:a[5],c:a[6],g:[],rx:-1}));
+L.push({id:'lm0',w:'me',p:'Pottery drop-in',a:'Mount Pleasant',x:252,y:604,h:48,c:'first time on the wheel',g:['uni','room'],rx:-1});
+let W=[{id:'w0',n:'Hike the Grouse Grind',x:132,y:224,by:'maya',also:['dev'],g:['uni','climb'],note:'before the snow'},{id:'w1',n:'Night market',x:352,y:424,by:'priya',also:['chloe'],g:['uni','brunch'],note:''},{id:'w2',n:'Dim sum in Chinatown',x:268,y:420,by:'me',also:[],g:['uni','brunch'],note:''}];
+const RXS=['🔥','🤩','😋','🥹','😂','💎'];
+const NEAR=[{p:'Kits Beach',a:'Kitsilano',x:150,y:536},{p:'Pottery drop-in',a:'Mount Pleasant',x:252,y:604},{p:'Main Street noodle bar',a:'Main Street',x:292,y:620}];
+let S={tab:'map',wishOn:true,drop:null,cap:null,share:[],pulse:null,openGrp:null};
+const ago=h=>h<1?'now':h<24?h+'h':Math.round(h/24)+'d';
+const gOf=id=>G.filter(g=>g.m.includes(id));
+const fVis=id=>id==='me'||gOf(id).some(g=>g.on);
+const wVis=w=>S.wishOn&&(w.by==='me'||w.g.some(i=>G.find(g=>g.id===i&&g.on)));
+const names=a=>a.map(i=>FB[i].n).join(', ');
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;$('#stage').append(d);setTimeout(()=>d.remove(),2400)}
+
+/* ---- Real Mapbox map ----
+   The prototype positions every pin in a fixed 390x844 pixel grid. We overlay
+   a real Vancouver map and keep that grid intact by mapping the grid's corners
+   to a geographic bounding box, then projecting each pin's grid x/y through the
+   live map on every move. All app data and logic stay in grid pixels. */
+// Supply your Mapbox public token via the ?token=... URL parameter, or paste it in place of MAPBOX_TOKEN below.
+mapboxgl.accessToken=new URLSearchParams(location.search).get('token')||'MAPBOX_TOKEN';
+const GRID_W=390,GRID_H=844;
+// Vancouver bounding box the 390x844 grid is laid over (west,south,east,north)
+const BBOX={w:-123.265,s:49.228,e:-123.055,n:49.300};
+const gridToLngLat=(x,y)=>[BBOX.w+(x/GRID_W)*(BBOX.e-BBOX.w),BBOX.n-(y/GRID_H)*(BBOX.n-BBOX.s)];
+const lngLatToGrid=(lng,lat)=>[(lng-BBOX.w)/(BBOX.e-BBOX.w)*GRID_W,(BBOX.n-lat)/(BBOX.n-BBOX.s)*GRID_H];
+let map,mapReady=false;
+if(mapboxgl.accessToken&&mapboxgl.accessToken!=='MAPBOX_TOKEN'){
+  map=new mapboxgl.Map({
+    container:'map',
+    style:'mapbox://styles/mapbox/standard',
+    bounds:[[BBOX.w,BBOX.s],[BBOX.e,BBOX.n]],
+    fitBoundsOptions:{padding:0},
+    attributionControl:false
+  });
+  map.on('load',()=>{map.fitBounds([[BBOX.w,BBOX.s],[BBOX.e,BBOX.n]],{padding:0,animate:false});mapReady=true;placePins()});
+  map.on('move',placePins);
+  map.on('resize',placePins);
+}else{
+  $('#map').style.background='#8CCBE3'; // falls back to the plain backdrop until a token is set
+  console.warn('Nook: set a Mapbox access token (MAPBOX_TOKEN) to show the real map.');
+}
+// Convert a tap on the map area to the grid coords the rest of the app expects.
+function clientToGrid(clientX,clientY){const r=$('#stage').getBoundingClientRect(),k=r.width/GRID_W;const px=(clientX-r.left)/k,py=(clientY-r.top)/k;if(mapReady&&map){const ll=map.unproject([px,py]);return lngLatToGrid(ll.lng,ll.lat).map(Math.round)}return[Math.round(px),Math.round(py)]}
+// Position every rendered .pin over its real geographic location.
+function placePins(){if(!mapReady||!map)return;document.querySelectorAll('#pins .pin').forEach(el=>{const gx=+el.dataset.gx,gy=+el.dataset.gy;const p=map.project(gridToLngLat(gx,gy));el.style.left=p.x+'px';el.style.top=p.y+'px'})}
+
+function pin(cls,x,y,inner,bg,badge,data,label){return`<button class="pin ${cls}" data-gx="${x}" data-gy="${y}" style="left:${x}px;top:${y}px" data-k="${data}" aria-label="${label}"><i></i><div class="sh"></div><div class="st"></div><div class="hd" style="background:${bg}">${inner}</div>${badge?`<div class="bd">${badge}</div>`:''}</button>`}
+const star=`<svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z" fill="#1E2B24"/></svg>`;
+function renderMap(){let h='';
+ W.filter(wVis).forEach(w=>h+=pin('wish',w.x,w.y,star,'#FFC44D',w.also.length+1>1?'+'+(w.also.length+1):'','w:'+w.id,'Wish pin: '+w.n));
+ L.filter(l=>fVis(l.w)).forEach(l=>h+=pin((l.w==='me'?'me ':'')+(S.pulse===l.id?'pulse':''),l.x,l.y,face(FB[l.w].f,34),'transparent',ago(l.h),'l:'+l.id,FB[l.w].n+' at '+l.p));
+ $('#pins').innerHTML=h;placePins();
+ $('#chips').innerHTML=`<button class="chip ${G.every(g=>g.on)?'on':''}" data-c="all">Everyone</button>`+G.map(g=>`<button class="chip ${g.on?'on':''}" data-c="${g.id}"><span class="dot" style="background:${g.col}"></span>${g.n}</button>`).join('')+`<button class="chip ${S.wishOn?'on':''}" data-c="wish">★ Wish pins</button>`}
+$('#chips').onclick=e=>{const k=e.target.closest('[data-c]');if(!k)return;const c=k.dataset.c;if(c==='all')G.forEach(g=>g.on=true);else if(c==='wish')S.wishOn=!S.wishOn;else{const g=G.find(x=>x.id===c);g.on=!g.on}renderMap();if(S.tab==='groups')renderGroups()};
+$('#pins').onclick=e=>{const b=e.target.closest('.pin');if(!b)return;const[t,id]=b.dataset.k.split(':');t==='l'?logSheet(id):wishSheet(id)};
+function close(){$('#sheetHost').innerHTML=''}
+function sheet(html,band,x){$('#sheetHost').innerHTML=`<div class="scrim" id="scr"></div><div class="sheet"><div class="band" style="background:${band}"><svg width="390" height="84" viewBox="0 0 390 84" class="abs" style="left:0;top:0"><path d="M0 84L70 36L120 62L190 18L260 58L320 30L390 66V84Z" fill="rgba(255,255,255,.16)"/><path d="M0 84L90 54L160 76L240 46L330 72L390 58V84Z" fill="rgba(0,0,0,.12)"/></svg><div class="abs" style="left:50%;top:8px;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:rgba(255,255,255,.6)"></div><button id="shX" aria-label="Close" class="abs" style="right:12px;top:14px;width:44px;height:44px;border-radius:50%;background:rgba(255,253,246,.9);font-size:16px">✕</button></div><div style="padding:14px 18px 28px">${html}</div></div>`;$('#scr').onclick=close;$('#shX').onclick=close}
+function logSheet(id){const l=L.find(x=>x.id===id),f=FB[l.w],mine=l.w==='me',gs=mine?G.filter(g=>l.g.includes(g.id)):gOf(l.w),more=L.filter(x=>x.w===l.w&&x.id!==id);
+ sheet(`<div style="display:flex;gap:12px;align-items:center"><div style="width:46px;height:46px;border-radius:50%;overflow:hidden;flex:none;border:3px solid var(--cream);margin-top:-36px;box-shadow:0 3px 8px rgba(0,0,0,.25)">${face(f.f,40)}</div><div class="sub"><b style="color:var(--ink)">${mine?'You':f.n}</b> logged this ${ago(l.h)==='now'?'just now':ago(l.h)+' ago'}</div></div>
+ <h2 style="font-size:24px;line-height:1.1;margin-top:8px">${l.p}</h2><div class="sub" style="margin-top:4px">${l.a}</div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${gs.map(g=>`<span class="chip" style="height:28px;font-size:12px"><span class="dot" style="background:${g.col}"></span>${g.n}</span>`).join('')}</div>
+ <button id="play" aria-label="Play 5 second clip" style="margin-top:14px;width:100%;height:170px;border-radius:20px;background:linear-gradient(160deg,${COL[f.f.c]},#1E2B24);position:relative;overflow:hidden;color:#fff"><div class="abs" style="left:50%;top:50%;margin:-26px 0 0 -26px"><svg width="52" height="52" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.35)"/><path d="M10 8v8l6-4z" fill="#fff"/></svg></div><div class="abs" style="left:12px;bottom:10px;font-size:13px;font-weight:700">0:05 · ${l.c}</div></button>
+ <div class="rxb" style="display:flex;gap:6px;margin-top:12px">${RXS.map((r,i)=>`<button class="rx ${l.rx===i?'on':''}" data-i="${i}" aria-label="React ${r}"><span>${r}</span></button>`).join('')}</div>
+ ${more.length?`<div class="lbl">More from ${mine?'you':f.n}</div>`+more.map(m=>`<button data-m="${m.id}" style="display:flex;width:100%;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);text-align:left"><span><b>${m.p}</b><br><span class="sub">${m.a}</span></span><span class="sub">${ago(m.h)}</span></button>`).join(''):''}
+ <div style="display:flex;gap:8px;margin-top:16px"><button class="btn dark" id="toWish" style="flex:1">★ Add to wish pins</button><button class="btn alt" style="width:auto" onclick="toast('Opens your maps app')">Directions</button></div>`,COL[f.f.c]);
+ $('#play').onclick=()=>story(l);$('#toWish').onclick=()=>{close();wishForm({n:l.p,x:l.x,y:l.y})};
+ document.querySelector('.rxb').onclick=e=>{const b=e.target.closest('.rx');if(!b)return;const i=+b.dataset.i;l.rx=l.rx===i?-1:i;document.querySelectorAll('.rx').forEach(x=>x.classList.toggle('on',+x.dataset.i===l.rx));b.classList.add('b');setTimeout(()=>b.classList.remove('b'),400)};
+ document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>logSheet(b.dataset.m))}
+function story(l){const f=FB[l.w],s=$('#story');s.innerHTML=`<div class="abs" style="inset:0;background:linear-gradient(170deg,${COL[f.f.c]},#1E2B24 82%)"></div><div class="abs" style="width:380px;height:380px;border-radius:50%;background:#fff;opacity:.2;left:-120px;top:150px;animation:drift 5s ease-in-out infinite alternate"></div>
+ <div class="abs" style="left:14px;right:14px;top:16px;height:4px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden"><u id="bar" style="display:block;height:100%;width:0;background:#fff"></u></div>
+ <div class="abs" style="left:14px;top:32px;display:flex;align-items:center;gap:10px"><div style="width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid #fff">${face(f.f,36)}</div><b>${l.w==='me'?'You':f.n}</b><span style="opacity:.8">${ago(l.h)}</span></div>
+ <button id="stX" aria-label="Close clip" class="abs" style="right:14px;top:30px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.2);font-size:16px">✕</button>
+ <div class="abs" style="inset:0;display:flex;align-items:center;justify-content:center">${face(f.f,170)}</div>
+ <div class="abs" style="left:18px;right:18px;bottom:40px"><h2 style="font-size:28px">${l.p}</h2><p style="margin-top:2px">${l.c}</p><div style="display:flex;gap:6px;margin-top:14px">${RXS.map(r=>`<button class="rx" style="background:rgba(255,255,255,.2)" onclick="this.classList.add('b');toast('Sent ${r}')"><span>${r}</span></button>`).join('')}</div></div>`;
+ s.classList.add('show');const x=()=>s.classList.remove('show');$('#stX').onclick=x;$('#bar').animate([{width:'0'},{width:'100%'}],{duration:5000,easing:'linear'}).onfinish=x}
+function wishSheet(id){const w=W.find(x=>x.id===id),by=FB[w.by],all=[w.by,...w.also],mineIn=all.includes('me')||all.includes('chloe');
+ sheet(`<div class="sub"><b style="color:var(--ink)">Wish pin</b> · dropped by ${w.by==='me'?'you':by.n}</div><h2 style="font-size:24px;line-height:1.1;margin-top:6px">${w.n}</h2>${w.note?`<div class="sub" style="margin-top:4px">${w.note}</div>`:''}
+ <div class="lbl">Who wants to go</div><div style="display:flex;gap:8px;align-items:center">${all.map(i=>{const f=i==='chloe'?me:FB[i];return`<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid var(--cream);box-shadow:0 0 0 1px var(--line)">${face(f.f,36)}</div>`}).join('')}<span class="sub">${names(all.map(i=>i==='chloe'?'me':i))}</span></div>
+ <div class="lbl">Shared with</div><div style="display:flex;gap:6px;flex-wrap:wrap">${G.filter(g=>w.g.includes(g.id)).map(g=>`<span class="chip" style="height:28px;font-size:12px"><span class="dot" style="background:${g.col}"></span>${g.n}</span>`).join('')}</div>
+ <div style="display:flex;gap:8px;margin-top:18px"><button class="btn alt" id="join" style="flex:1">${mineIn?"You're in ✓":'I want to go too'}</button><button class="btn" id="here" style="flex:1">I'm here, log it</button></div>`,'#FFC44D');
+ $('#join').onclick=()=>{if(w.by==='me')return toast('It\'s your pin');if(!mineIn){w.also.push('me');toast('Added you to this wish pin')}wishSheet(id);renderMap();wishes()};
+ $('#here').onclick=()=>{close();startCap({p:w.n,a:'Wish pin',x:w.x,y:w.y,wish:w.id})}}
+function wishForm(pre){const sel=new Set(G.filter(g=>g.on).map(g=>g.id)),draw=()=>{$('#sg').innerHTML=G.map(g=>`<button class="chip ${sel.has(g.id)?'on':''}" data-g="${g.id}"><span class="dot" style="background:${g.col}"></span>${g.n}</button>`).join('');$('#sgN').textContent=sel.size?'Visible to '+names([...new Set(G.filter(g=>sel.has(g.id)).flatMap(g=>g.m))])+'.':'Only you will see this pin.'};
+ sheet(`<h2 style="font-size:24px">New wish pin</h2><div class="sub" style="margin-top:4px">Friends in the groups you pick will see it on their maps and can say they want to go too.</div><div class="lbl">Where do you want to go?</div><input type="text" id="wn" value="${pre.n||''}" placeholder="Name this place"><div class="lbl">Share with</div><div id="sg" style="display:flex;gap:6px;flex-wrap:wrap"></div><div id="sgN" class="sub" style="margin-top:8px"></div><button class="btn" id="wgo" style="margin-top:18px">Drop wish pin</button>`,'#FFC44D');draw();
+ $('#sg').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;sel.has(b.dataset.g)?sel.delete(b.dataset.g):sel.add(b.dataset.g);draw()};
+ $('#wgo').onclick=()=>{const n=$('#wn').value.trim();if(!n)return toast('Name the place first');W.push({id:'w'+Date.now(),n,x:pre.x,y:pre.y,by:'me',also:[],g:[...sel],note:''});S.wishOn=true;close();renderMap();wishes();toast(sel.size?'Shared with '+G.filter(g=>sel.has(g.id)).map(g=>g.n).join(', '):'Saved just for you')}}
+function dropMode(on){$('#drop').style.display=on?'block':'none';$('#banner').style.display=on?'flex':'none';$('#top').style.display=on?'none':'block'}
+$('#wishBtn').onclick=()=>{go('map');dropMode(true)};$('#newWish').onclick=$('#wishBtn').onclick;$('#dropX').onclick=()=>dropMode(false);
+$('#drop').onclick=e=>{dropMode(false);const[gx,gy]=clientToGrid(e.clientX,e.clientY);wishForm({x:gx,y:gy})};
+function wishes(){$('#wishList').innerHTML=W.filter(wVis).map(w=>`<div class="card"><div style="display:flex;gap:12px;align-items:center"><div style="width:44px;height:44px;border-radius:14px;background:var(--sun);display:flex;align-items:center;justify-content:center;flex:none">${star}</div><div style="flex:1"><b>${w.n}</b><div class="sub">${w.by==='me'?'You':FB[w.by].n}${w.also.length?' + '+w.also.length:''} · ${G.filter(g=>w.g.includes(g.id)).map(g=>g.n).join(', ')||'Just you'}</div></div></div><button class="btn alt" data-s="${w.id}" style="margin-top:10px;height:42px">Show on map</button></div>`).join('')||'<p class="sub" style="margin-top:16px">No wish pins yet. Drop one on the map.</p>'}
+$('#wishList').onclick=e=>{const b=e.target.closest('[data-s]');if(b){go('map');wishSheet(b.dataset.s)}};
+function renderGroups(){$('#grpList').innerHTML=G.map(g=>`<div class="card"><div style="display:flex;align-items:center;gap:12px"><span class="dot" style="background:${g.col};width:14px;height:14px"></span><div style="flex:1"><b>${g.n}</b><div style="display:flex;margin-top:6px">${g.m.map((i,k)=>`<div style="width:28px;height:28px;border-radius:50%;overflow:hidden;border:2px solid var(--cream);margin-left:${k?-8:0}px">${face(FB[i].f,24)}</div>`).join('')}</div></div><button class="sw" role="switch" aria-checked="${g.on}" aria-label="Show ${g.n} on map" data-t="${g.id}"></button></div>
+ <button data-e="${g.id}" class="sub" style="font-weight:700;margin-top:10px;height:36px">${S.openGrp===g.id?'Done':'Edit members'}</button>
+ ${S.openGrp===g.id?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${F.map(f=>`<button class="chip ${g.m.includes(f.id)?'on':''}" data-m="${g.id}:${f.id}">${f.n}</button>`).join('')}</div>`:''}</div>`).join('')}
+$('#grpList').onclick=e=>{const t=e.target.closest('[data-t]'),ed=e.target.closest('[data-e]'),m=e.target.closest('[data-m]');if(t){const g=G.find(x=>x.id===t.dataset.t);g.on=!g.on}else if(ed)S.openGrp=S.openGrp===ed.dataset.e?null:ed.dataset.e;else if(m){const[gi,fi]=m.dataset.m.split(':'),g=G.find(x=>x.id===gi);g.m=g.m.includes(fi)?g.m.filter(x=>x!==fi):[...g.m,fi]}else return;renderGroups();renderMap()};
+$('#newGrp').onclick=()=>{const sel=new Set(),draw=()=>{$('#gp').innerHTML=F.map(f=>`<button class="chip ${sel.has(f.id)?'on':''}" data-f="${f.id}">${f.n}</button>`).join('')};
+ $('#grpForm').innerHTML=`<div class="card"><div class="lbl" style="margin-top:0">Group name</div><input type="text" id="gn" placeholder="Friday walkers"><div class="lbl">Who's in</div><div id="gp" style="display:flex;flex-wrap:wrap;gap:6px"></div><button class="btn" id="gc" style="margin-top:14px">Create group</button></div>`;draw();
+ $('#gp').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;sel.has(b.dataset.f)?sel.delete(b.dataset.f):sel.add(b.dataset.f);draw()};
+ $('#gc').onclick=()=>{const n=$('#gn').value.trim();if(!n||!sel.size)return toast('Add a name and at least one friend');G.push({id:'g'+Date.now(),n,col:['#C98A10','#A0623A','#C4503F'][G.length%3],m:[...sel],on:true});$('#grpForm').innerHTML='';renderGroups();renderMap();toast('Group created')}};
+function editor(){const sec=(l,k,items)=>`<div class="lbl">${l}</div><div style="display:flex;flex-wrap:wrap;gap:8px">${items.map((it,i)=>k==='c'?`<button class="cs ${me.f.c===i?'on':''}" data-k="c" data-i="${i}" style="background:${it}" aria-label="Colour ${i+1}"></button>`:`<button class="opt ${me.f[k]===i?'on':''}" data-k="${k}" data-i="${i}" aria-label="${l} ${i+1}">${face({...me.f,h:0,e:0,n:0,m:0,x:0,[k]:i},34)}</button>`).join('')}</div>`;
+ $('#bigFace').innerHTML=face(me.f,76);$('#editor').innerHTML=`<h2 style="font-size:20px;margin:22px 0 2px">Make your pin</h2><div class="sub">This is how friends see you on the map.</div>`+sec('Colour','c',COL)+sec('Hair','h',HAIR)+sec('Eyes','e',EYE)+sec('Nose','n',NOSE)+sec('Mouth','m',MOUTH)+sec('Extras','x',XTRA);
+ $('#meFace').innerHTML=face(me.f,30);$('#meStat').textContent=L.filter(l=>l.w==='me').length+' logs · '+W.filter(w=>w.by==='me').length+' wish pins · '+G.length+' groups';
+ $('#myLogs').innerHTML=L.filter(l=>l.w==='me').map(l=>`<button data-l="${l.id}" style="display:flex;width:100%;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);text-align:left"><span><b>${l.p}</b><br><span class="sub">${l.a}</span></span><span class="sub">${ago(l.h)}</span></button>`).join('')}
+$('#editor').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;me.f[b.dataset.k]=+b.dataset.i;editor();renderMap()};
+$('#myLogs').onclick=e=>{const b=e.target.closest('[data-l]');if(b){go('map');logSheet(b.dataset.l)}};
+function startCap(pl){S.cap={pl:pl||NEAR[0],t:0,tm:null};$('#near').innerHTML=NEAR.map(n=>`<button class="chip" data-p="${n.p}" style="background:${n.p===S.cap.pl.p?'#fff':'rgba(255,255,255,.14)'};color:${n.p===S.cap.pl.p?'#1E2B24':'#fff'};border:0;white-space:nowrap">${n.p}</button>`).join('');ring(0);$('#recB').textContent='Ready';$('#capHint').textContent="I'm here. Tap to record up to 5 seconds.";$('#dotR').setAttribute('r',28);hideAll();$('#cap').classList.add('show');$('#nav').style.display='none'}
+function hideAll(){['cap','det','done','story'].forEach(i=>$('#'+i).classList.remove('show'))}
+$('#near').onclick=e=>{const b=e.target.closest('[data-p]');if(b)startCap(NEAR.find(n=>n.p===b.dataset.p))};
+function ring(t){$('#ring').setAttribute('stroke-dashoffset',251.3*(1-t/5))}
+$('#rec').onclick=()=>{const c=S.cap;if(c.tm)return stop();c.t=0;$('#dotR').setAttribute('r',14);$('#capHint').textContent='Recording. Tap to stop.';c.tm=setInterval(()=>{c.t+=.1;ring(c.t);$('#recB').innerHTML=`<span style="color:#FF5A4A;animation:rec 1s infinite">●</span> 0:0${Math.floor(c.t)} / 0:05`;if(c.t>=5)stop()},100)};
+function stop(){const c=S.cap;clearInterval(c.tm);c.tm=null;if(c.t<.5){ring(0);$('#dotR').setAttribute('r',28);return}detail()}
+function detail(){const c=S.cap;hideAll();$('#det').classList.add('show');$('#dName').textContent=c.pl.p;$('#dArea').textContent=c.pl.a;$('#thumb').style.background='linear-gradient(160deg,'+COL[me.f.c]+',#1E2B24)';$('#thumb').textContent='0:0'+Math.max(1,Math.round(c.t));S.share=G.map(g=>g.id);shareUI()}
+function shareUI(){$('#shareG').innerHTML=G.map(g=>`<button class="chip ${S.share.includes(g.id)?'on':''}" data-g="${g.id}"><span class="dot" style="background:${g.col}"></span>${g.n}</button>`).join('');const v=[...new Set(G.filter(g=>S.share.includes(g.id)).flatMap(g=>g.m))];$('#seen').textContent=v.length?'Friends who can watch: '+names(v):'Only you will see this clip.'}
+$('#shareG').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;const i=b.dataset.g;S.share=S.share.includes(i)?S.share.filter(x=>x!==i):[...S.share,i];shareUI()};
+$('#capX').onclick=()=>{clearInterval(S.cap.tm);hideAll();$('#nav').style.display='';go('map')};
+$('#detX').onclick=()=>startCap(S.cap.pl);
+$('#post').onclick=()=>{const c=S.cap,id='lm'+Date.now();L.push({id,w:'me',p:c.pl.p,a:c.pl.a,x:c.pl.x,y:c.pl.y,h:0,c:$('#capT').value||'just logged this',g:S.share.slice(),rx:-1});if(c.pl.wish)W=W.filter(w=>w.id!==c.pl.wish);S.pulse=id;const v=[...new Set(G.filter(g=>S.share.includes(g.id)).flatMap(g=>g.m))];hideAll();$('#done').classList.add('show');$('#dnP').textContent=c.pl.p;$('#dnF').innerHTML=v.length?v.map(i=>`<div style="text-align:center;font-size:12px"><div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid #fff">${face(FB[i].f,40)}</div>${FB[i].n}</div>`).join(''):'<span style="opacity:.8">Nobody yet. Only you.</span>';$('#capT').value='';renderMap();editor()};
+$('#dnGo').onclick=()=>{hideAll();$('#nav').style.display='';go('map')};
+const NAVI=[['map','Map','<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>'],['wishes','Wish pins','<path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/>'],['cam'],['groups','Groups','<circle cx="9" cy="9" r="3.5"/><circle cx="17" cy="10" r="2.5"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5M15 15c3 0 6 1.5 6 4"/>'],['me','Me','<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>']];
+function nav(){$('#nav').innerHTML=NAVI.map(n=>n[0]==='cam'?`<div style="display:flex;justify-content:center"><button id="cam" aria-label="I'm here, log it" style="width:66px;height:66px;margin-top:-30px;border-radius:50%;border:5px solid var(--cream);background:var(--acc);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(30,43,36,.28)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div>`:`<button data-t="${n[0]}" class="${S.tab===n[0]?'on':''}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${n[2]}</svg>${n[1]}</button>`).join('');
+ $('#cam').onclick=()=>startCap()}
+$('#nav').onclick=e=>{const b=e.target.closest('[data-t]');if(b)go(b.dataset.t)};
+function go(t){S.tab=t;close();dropMode(false);['wishes','groups','me'].forEach(x=>$('#L-'+x).classList.toggle('show',x===t));const m=t==='map';['top','wishBtn','grpBtn'].forEach(i=>$('#'+i).style.display=m?'':'none');if(t==='wishes')wishes();if(t==='groups')renderGroups();if(t==='me')editor();nav();if(m&&map){map.resize();placePins()}}
+$('#meBtn').onclick=()=>go('me');$('#grpBtn').onclick=()=>go('groups');
+function fit(){const k=Math.min(innerWidth/390,innerHeight/844);$('#stage').style.transform=`translate(-50%,-50%) scale(${k})`;if(map)map.resize()}
+addEventListener('resize',fit);fit();renderMap();editor();go('map');
+</script></body></html>
